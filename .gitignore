@@ -1,0 +1,6 @@
+swim.log
+build
+test/*.vcd
+test/results.xml
+test/sim_build
+test/__pycache__

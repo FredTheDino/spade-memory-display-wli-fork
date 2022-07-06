@@ -1,0 +1,69 @@
+#   BOARD PINS
+
+# Project specific pins
+
+#   FPGA pins:
+
+set_io clk D1
+set_io -nowarn led B6
+
+set_io -nowarn rx  A3
+set_io -nowarn tx  B3
+
+#   PMOD FULL (PMOD3)
+
+#   FPGA pins:
+#
+#     ----------
+#    | B4    C6 | <
+#    | B5    E3 |
+#    | E1    C2 |
+#    | B1    A1 |
+#    | GND  GND |
+#    | 3V3  3V3 |
+#     ----------
+#
+# set_io -nowarn PMOD1 B4
+# set_io -nowarn PMOD2 C6
+# set_io -nowarn PMOD3 B5
+# set_io -nowarn PMOD4 E3
+# set_io -nowarn PMOD5 E1
+# set_io -nowarn PMOD6 C2
+# set_io -nowarn PMOD7 B1
+# set_io -nowarn PMOD8 A1
+
+#   PMOD LEFT (PMOD2)
+
+#   FPGA pins:
+#
+#     -----
+#    | B3  | <
+#    | A3  |
+#    | B6  |
+#    | C5  |
+#    | GND |
+#    | 3V3 | 
+#     -----
+#
+# set_io -nowarn B3 B3
+# set_io -nowarn A3 A3
+# set_io -nowarn B6 B6
+# set_io -nowarn C5 C5
+
+#   PMOD RIGHT (PMOD1)
+
+#   FPGA pins:
+#
+#     -----
+#    | 3V3 | <
+#    | GND |
+#    | A1  |
+#    | B1  |
+#    | D1  |
+#    | E2  | 
+#     -----
+#
+#set_io -nowarn A1 A1
+#set_io -nowarn B1 B1
+#set_io -nowarn D1 D1
+#set_io -nowarn E2 E2

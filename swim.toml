@@ -1,0 +1,22 @@
+compiler_dir = "spade"
+source_dirs = ["src", "spade/stdlib"]
+
+[simulation]
+testbench_dir = "test"
+
+[synthesis]
+top = "top"
+extra_verilog = [ "src/top.v" ]
+command = "synth_ice40"
+
+[pnr]
+architecture = "ice40"
+device = "iCE40LP1K"
+pin_file = "icesugar-nano.pcf"
+package = "cm36"
+
+[packing]
+tool = "icepack"
+
+[upload]
+tool = "icesprog"

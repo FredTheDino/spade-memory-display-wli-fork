@@ -1,0 +1,113 @@
+struct Timing {
+    us1: int<10>,
+    us3: int<10>,
+
+}
+
+// Using int<9> to avoid having to worry about negative numbers
+enum State {
+    CsLow{line: int<9>, duration: int<10>},
+    CsHigh{line: int<9>, duration: int<10>},
+    Mode{line: int<9>},
+    FrameInv{line: int<9>},
+    Clear{line: int<9>},
+    FirstDummy{line: int<9>, count: int<5>},
+    Address{line: int<9>, count: int<5>},
+    Data{line: int<9>, x: int<10>},
+    EndDummy{line: int<9>, count: int<5>},
+    EndCsh{line: int<9>, duration: int<10>},
+}
+
+entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> State {
+    reg(clk) state reset(rst: State::CsLow(0, 0)) = match state {
+        State::CsLow$(line, duration) => {
+            if duration == trunc(t.us1-1) {
+                State::CsHigh$(line, duration: 0)
+            }
+            else {
+                State::CsLow$(line, duration: trunc(duration+1))
+            }
+        },
+        State::CsHigh$(line, duration) => {
+            if duration == trunc(t.us1-1) {
+                if spi_falling_edge {State::Mode(line)} else {state}
+            }
+            else {
+                State::CsHigh$(line, duration: trunc(duration+1))
+            }
+        },
+        State::Mode(line) =>
+            if spi_falling_edge {State::FrameInv(line)} else {state},
+        State::FrameInv(line) =>
+            if spi_falling_edge {State::Clear(line)} else {state},
+        State::Clear(line) =>
+            if spi_falling_edge {State::FirstDummy$(line, count: 0)} else {state},
+        State::FirstDummy$(line, count) => {
+            if spi_falling_edge {
+                if count == 4
+                    { State::Address$(line, count: 0) }
+                else
+                    { State::FirstDummy$(line, count: trunc(count+1)) }
+            }
+            else {
+                state
+            }
+        },
+        State::Address$(line, count) => {
+            if spi_falling_edge {
+                if count == 7
+                    {State::Data$(line, x: 0)}
+                else
+                    {State::Address$(line, count: trunc(count + 1))}
+            }
+            else {
+                state
+            }
+        },
+        State::Data$(line, x) => {
+            if spi_falling_edge {
+                // TODO: Make configurable?
+                if x == 400
+                    { State::EndDummy$(line, count: 0) }
+                else
+                    { State::Data$(line, x: trunc(x+1)) }
+            }
+            else {
+                state
+            }
+        },
+        State::EndDummy$(line, count) => {
+            if spi_falling_edge {
+                if count == 15
+                    { State::EndCsh$(line, duration: 0) }
+                else
+                    { State::EndDummy$(line, count: trunc(count+1)) }
+            }
+            else {
+                state
+            }
+        },
+        State::EndCsh$(line, duration) => {
+            if duration > t.us1 {
+                let new_line = if line == 239 { 0 } else { trunc(line+1) };
+                State::CsLow$(line: new_line, duration: 0)
+            }
+            else {
+                State::EndCsh$(line, duration: trunc(duration+1))
+            }
+        }
+    };
+
+    state
+}
+
+enum Output<T> {
+    UpdateMode,
+    FrameInversion{val: bool},
+    AllClear,
+    Dummy,
+    Address{b: bool},
+    Pixel{p: T},
+    Done,
+}
+
