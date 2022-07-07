@@ -67,7 +67,7 @@ entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> St
         State::Data$(line, x) => {
             if spi_falling_edge {
                 // TODO: Make configurable?
-                if x == 400
+                if x == 399
                     { State::EndDummy$(line, count: 0) }
                 else
                     { State::Data$(line, x: trunc(x+1)) }
@@ -88,7 +88,7 @@ entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> St
             }
         },
         State::EndCsh$(line, duration) => {
-            if duration > t.us1 {
+            if duration >= trunc(t.us1 - 1) {
                 let new_line = if line == 239 { 0 } else { trunc(line+1) };
                 State::CsLow$(line: new_line, duration: 0)
             }
