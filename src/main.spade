@@ -108,6 +108,28 @@ enum Output<T> {
     Dummy,
     Address{b: bool},
     Pixel{p: T},
-    Done,
+    // Chip select should be high but sclk should be masked
+    CsHigh,
+    // Chip select should be low but sclk should be masked
+    CsLow
+}
+
+struct OutputPins {
+    sclk: bool,
+    cs: bool,
+    mosi: bool,
+}
+
+fn output_translator(o: Output<bool>, sclk: bool) -> OutputPins {
+    match o {
+        Output::UpdateMode => OutputPins$(sclk, cs: true, mosi: true),
+        Output::FrameInversion(val) => OutputPins$(sclk, cs: true, mosi: val),
+        Output::AllClear => OutputPins$(sclk, cs: true, mosi: false),
+        Output::Dummy => OutputPins$(sclk, cs: true, mosi: false),
+        Output::Address(val) => OutputPins$(sclk, cs: true, mosi: val),
+        Output::Pixel(val) => OutputPins$(sclk, cs: true, mosi: val),
+        Output::CsHigh => OutputPins$(sclk: false, cs: true, mosi: false),
+        Output::CsLow => OutputPins$(sclk: false, cs: false, mosi: false),
+    }
 }
 
