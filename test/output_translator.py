@@ -16,19 +16,50 @@ async def ensure_sclk_passthrough(s, o):
 async def fsm(dut):
     s = SpadeExt(dut)
 
-    o_mosi = s.o.mosi
     o_sclk = s.o.sclk
-    o_cs = s.o.cs
 
-    s.i.o = "proj::main::Output::UpdateMode()"
+    s.i.o = "Output::UpdateMode()"
     await ensure_sclk_passthrough(s, o_sclk)
-    await triggers.Timer(1, units='ps')
-    
+    s.o.mosi.assert_eq("true")
 
-    # s.i.o = "proj::main::FrameInversion()"
-    # s.i.o = "proj::main::AllClear()"
-    # s.i.o = "proj::main::Dummy()"
-    # s.i.o = "proj::main::Address()"
-    # s.i.o = "proj::main::Pixel()"
-    # s.i.o = "proj::main::CsHigh()"
-    # s.i.o = "proj::main::CsLo()"
+    s.i.o = "Output::FrameInv(true)"
+    await ensure_sclk_passthrough(s, o_sclk)
+    s.o.mosi.assert_eq("true")
+    s.i.o = "Output::FrameInv(false)"
+    await ensure_sclk_passthrough(s, o_sclk)
+    s.o.mosi.assert_eq("false")
+
+    s.i.o = "Output::AllClear()"
+    await ensure_sclk_passthrough(s, o_sclk)
+    s.o.mosi.assert_eq("false")
+
+    s.i.o = "Output::Dummy()"
+    await ensure_sclk_passthrough(s, o_sclk)
+    s.o.mosi.assert_eq("false")
+
+    s.i.o = "Output::Address(false)"
+    await ensure_sclk_passthrough(s, o_sclk)
+    s.o.mosi.assert_eq("false")
+    s.i.o = "Output::Address(true)"
+    await ensure_sclk_passthrough(s, o_sclk)
+    s.o.mosi.assert_eq("true")
+
+    s.i.o = "Output::Pixel(true)"
+    s.o.mosi.assert_eq("true")
+    s.i.o = "Output::Pixel(false)"
+    await ensure_sclk_passthrough(s, o_sclk)
+    s.o.mosi.assert_eq("false")
+
+    s.i.sclk = "true"
+    s.i.o = "Output::CsHigh()"
+    await triggers.Timer(1, units='ps')
+    s.o.mosi.assert_eq("false")
+    s.o.sclk.assert_eq("false")
+    s.o.cs.assert_eq("true")
+
+    s.i.o = "Output::CsLow()"
+    await triggers.Timer(1, units='ps')
+    s.o.mosi.assert_eq("false")
+    s.o.sclk.assert_eq("false")
+    s.o.cs.assert_eq("false")
+    # s.i.o = "Output::CsLow()"

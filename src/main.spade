@@ -1,7 +1,58 @@
+use std::ops::div_pow2;
+
+enum Output<T> {
+    UpdateMode,
+    FrameInv{val: bool},
+    AllClear,
+    Dummy,
+    Address{b: bool},
+    Pixel{p: T},
+    // Chip select should be high but sclk should be masked
+    CsHigh,
+    // Chip select should be low but sclk should be masked
+    CsLow
+}
+
+struct DisplayGenOutput {
+    sclk: bool,
+    o: Output<(int<10>, int<9>)>
+}
+
+/// Generates the base otuput signals which should then be converted
+/// to contain the graphics and passed to the output translator
+entity display_gen(clk: clk, rst: bool, t: Timing) -> DisplayGenOutput {
+    let Clk$(sclk, sclk_falling_edge) = inst clk_gen(clk, rst, t);
+
+    let state = inst display_fsm$(clk, rst, sclk_falling_edge, t);
+
+    DisplayGenOutput(sclk, display_output(state))
+}
+
+struct OutputPins {
+    sclk: bool,
+    cs: bool,
+    mosi: bool,
+}
+
+fn output_translator(o: Output<bool>, sclk: bool) -> OutputPins {
+    match o {
+        Output::UpdateMode => OutputPins$(sclk, cs: true, mosi: true),
+        Output::FrameInv(val) => OutputPins$(sclk, cs: true, mosi: val),
+        Output::AllClear => OutputPins$(sclk, cs: true, mosi: false),
+        Output::Dummy => OutputPins$(sclk, cs: true, mosi: false),
+        Output::Address(val) => OutputPins$(sclk, cs: true, mosi: val),
+        Output::Pixel(val) => OutputPins$(sclk, cs: true, mosi: val),
+        Output::CsHigh => OutputPins$(sclk: false, cs: true, mosi: false),
+        Output::CsLow => OutputPins$(sclk: false, cs: false, mosi: false),
+    }
+}
+
+// Private stuff
+
 struct Timing {
     us1: int<10>,
     us3: int<10>,
-
+    mhz1: int<10>
 }
 
 // Using int<9> to avoid having to worry about negative numbers
@@ -18,7 +69,29 @@ enum State {
     EndCsh{line: int<9>, duration: int<10>},
 }
 
-entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> State {
+
+struct Clk {
+    sclk: bool,
+    sclk_falling_edge: bool
+}
+
+entity clk_gen(clk: clk, rst: bool, t: Timing) -> Clk {
+    reg(clk) ctr reset(rst: 0) = {
+        if ctr == t.mhz1 {
+            0
+        }
+        else {
+            trunc(ctr+1)
+        }
+    };
+
+    Clk$(
+        sclk: ctr > (t.mhz1 `div_pow2` 1),
+        sclk_falling_edge: ctr == 0
+    )
+}
+
+entity display_fsm(clk: clk, rst: bool, sclk_falling_edge: bool, t: Timing) -> State {
     reg(clk) state reset(rst: State::CsLow(0, 0)) = match state {
         State::CsLow$(line, duration) => {
             if duration == trunc(t.us1-1) {
@@ -30,20 +103,20 @@ entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> St
         },
         State::CsHigh$(line, duration) => {
             if duration == trunc(t.us1-1) {
-                if spi_falling_edge {State::Mode(line)} else {state}
+                if sclk_falling_edge {State::Mode(line)} else {state}
             }
             else {
                 State::CsHigh$(line, duration: trunc(duration+1))
             }
         },
         State::Mode(line) =>
-            if spi_falling_edge {State::FrameInv(line)} else {state},
+            if sclk_falling_edge {State::FrameInv(line)} else {state},
         State::FrameInv(line) =>
-            if spi_falling_edge {State::Clear(line)} else {state},
+            if sclk_falling_edge {State::Clear(line)} else {state},
         State::Clear(line) =>
-            if spi_falling_edge {State::FirstDummy$(line, count: 0)} else {state},
+            if sclk_falling_edge {State::FirstDummy$(line, count: 0)} else {state},
         State::FirstDummy$(line, count) => {
-            if spi_falling_edge {
+            if sclk_falling_edge {
                 if count == 4
                     { State::Address$(line, count: 0) }
                 else
@@ -54,7 +127,7 @@ entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> St
             }
         },
         State::Address$(line, count) => {
-            if spi_falling_edge {
+            if sclk_falling_edge {
                 if count == 7
                     {State::Data$(line, x: 0)}
                 else
@@ -65,7 +138,7 @@ entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> St
             }
         },
         State::Data$(line, x) => {
-            if spi_falling_edge {
+            if sclk_falling_edge {
                 // TODO: Make configurable?
                 if x == 399
                     { State::EndDummy$(line, count: 0) }
@@ -77,7 +150,7 @@ entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> St
             }
         },
         State::EndDummy$(line, count) => {
-            if spi_falling_edge {
+            if sclk_falling_edge {
                 if count == 15
                     { State::EndCsh$(line, duration: 0) }
                 else
@@ -101,35 +174,18 @@ entity display_fsm(clk: clk, rst: bool, spi_falling_edge: bool, t: Timing) -> St
     state
 }
 
-enum Output<T> {
-    UpdateMode,
-    FrameInversion{val: bool},
-    AllClear,
-    Dummy,
-    Address{b: bool},
-    Pixel{p: T},
-    // Chip select should be high but sclk should be masked
-    CsHigh,
-    // Chip select should be low but sclk should be masked
-    CsLow
-}
 
-struct OutputPins {
-    sclk: bool,
-    cs: bool,
-    mosi: bool,
-}
-
-fn output_translator(o: Output<bool>, sclk: bool) -> OutputPins {
-    match o {
-        Output::UpdateMode => OutputPins$(sclk, cs: true, mosi: true),
-        Output::FrameInversion(val) => OutputPins$(sclk, cs: true, mosi: val),
-        Output::AllClear => OutputPins$(sclk, cs: true, mosi: false),
-        Output::Dummy => OutputPins$(sclk, cs: true, mosi: false),
-        Output::Address(val) => OutputPins$(sclk, cs: true, mosi: val),
-        Output::Pixel(val) => OutputPins$(sclk, cs: true, mosi: val),
-        Output::CsHigh => OutputPins$(sclk: false, cs: true, mosi: false),
-        Output::CsLow => OutputPins$(sclk: false, cs: false, mosi: false),
+fn display_output(state: State) -> Output<(int<10>, int<9>)> {
+    match state {
+        State::CsLow(_, _) => Output::CsLow(),
+        State::CsHigh(_, _) => Output::CsHigh(),
+        State::Mode(_) => Output::UpdateMode(),
+        State::FirstDummy(_, _) => Output::Dummy(),
+        State::FrameInv(line) => Output::FrameInv((line & 1) == 1),
+        State::Clear(_) => Output::AllClear(),
+        State::Address(line, count) => Output::Address(((sext(line) >> count) & 1) == 1),
+        State::Data$(line, x) => Output::Pixel((x, line)),
+        State::EndDummy(_, _) => Output::Dummy(),
+        State::EndCsh(_, _) => Output::CsHigh(),
     }
 }
-
