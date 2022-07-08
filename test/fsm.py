@@ -31,10 +31,11 @@ async def fsm(dut):
     for line in range(0, 3):
         print(f"{line}")
         # Initial state is CsLow
-        s.o.assert_eq(f"State::CsLow({line}, 0)")
 
-        # Wait low time (us1)
-        [await FallingEdge(clk) for _ in range(0,5)]
+        for i in range(0, 5):
+            s.o.assert_eq(f"State::CsLow({line}, {i})")
+            await FallingEdge(clk)
+
         # Now high
         s.o.assert_eq(f"State::CsHigh({line}, 0)")
 

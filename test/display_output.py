@@ -40,3 +40,5 @@ async def line_index_is_output_lsb_first(dut):
     await triggers.Timer(1, units='ps')
     s.o.assert_eq("Output::Address(true)")
 
+
+

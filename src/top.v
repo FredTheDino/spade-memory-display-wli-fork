@@ -1,6 +1,8 @@
 module top
     ( input clk
-    , output led
+    , output sclk
+    , output mosi
+    , output cs
     );
 
     reg rst = 1;
@@ -8,9 +10,9 @@ module top
         rst <= 0;
     end
 
-    e_main main
-        ( ._i_clk(clk)
-        , ._i_rst(rst)
-        , .__output(led)
+    e_proj_hw_test__top main
+        ( .clk_i(clk)
+        , .rst_i(rst)
+        , .output__({sclk, cs, mosi})
         );
 endmodule

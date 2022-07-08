@@ -183,7 +183,7 @@ fn display_output(state: State) -> Output<(int<10>, int<9>)> {
         State::FirstDummy(_, _) => Output::Dummy(),
         State::FrameInv(line) => Output::FrameInv((line & 1) == 1),
         State::Clear(_) => Output::AllClear(),
-        State::Address(line, count) => Output::Address(((sext(line) >> count) & 1) == 1),
+        State::Address(line, count) => Output::Address(((line >> zext(count)) & 1) == 1),
         State::Data$(line, x) => Output::Pixel((x, line)),
         State::EndDummy(_, _) => Output::Dummy(),
         State::EndCsh(_, _) => Output::CsHigh(),

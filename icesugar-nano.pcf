@@ -7,8 +7,8 @@
 set_io clk D1
 set_io -nowarn led B6
 
-set_io -nowarn rx  A3
-set_io -nowarn tx  B3
+# set_io -nowarn rx  A3
+# set_io -nowarn tx  B3
 
 #   PMOD FULL (PMOD3)
 
@@ -46,9 +46,9 @@ set_io -nowarn tx  B3
 #     -----
 #
 # set_io -nowarn B3 B3
-# set_io -nowarn A3 A3
-# set_io -nowarn B6 B6
-# set_io -nowarn C5 C5
+# set_io cs A3
+set_io mosi B6
+set_io sclk C5
 
 #   PMOD RIGHT (PMOD1)
 
@@ -66,4 +66,4 @@ set_io -nowarn tx  B3
 #set_io -nowarn A1 A1
 #set_io -nowarn B1 B1
 #set_io -nowarn D1 D1
-#set_io -nowarn E2 E2
+set_io cs E2

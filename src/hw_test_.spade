@@ -8,10 +8,23 @@ entity top(clk: clk, rst: bool) -> OutputPins {
     let t = Timing$(
         us1: 12,
         us3: 36,
-        mhz1: 12
+        mhz1: 6
     );
 
     let display_signals = inst display_gen(clk, rst, t);
+
+    reg(clk) slow_timer: int<32> reset(rst: 0) = if slow_timer == 1_200_000 {
+        0
+    }
+    else {
+        trunc(slow_timer + 1)
+    };
+
+    reg(clk) offset: int<10> reset(rst: 0) = if slow_timer == 0 {
+        trunc(offset + 1)
+    } else {
+        offset
+    };
 
     let with_pixels = match display_signals.o {
         Output::UpdateMode => Output::UpdateMode(),
@@ -19,7 +32,9 @@ entity top(clk: clk, rst: bool) -> OutputPins {
         Output::AllClear => Output::AllClear(),
         Output::Dummy => Output::Dummy(),
         Output::Address(v) => Output::Address(v),
-        Output::Pixel((x, y)) => Output::Pixel((x & 0b100) == 0 && (y & 0b100) == 0),
+        Output::Pixel((x, y)) => {
+            Output::Pixel((x + offset & 0b10000) == (sext(y) + offset & 0b10000))
+        },
         Output::CsHigh => Output::CsHigh(),
         Output::CsLow => Output::CsLow(),
     };
