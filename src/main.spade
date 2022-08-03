@@ -92,8 +92,8 @@ entity clk_gen(clk: clk, rst: bool, t: Timing) -> Clk {
 }
 
 entity display_fsm(clk: clk, rst: bool, sclk_falling_edge: bool, t: Timing) -> State {
-    reg(clk) state reset(rst: State::CsLow(0, 0)) = match state {
-        State::CsLow$(line, duration) => {
+    reg(clk) state reset(rst: State::CsLow(0, 0)) = match (sclk_falling_edge, state) {
+        (_, State::CsLow$(line, duration)) => {
             if duration == trunc(t.us1-1) {
                 State::CsHigh$(line, duration: 0)
             }
@@ -101,7 +101,7 @@ entity display_fsm(clk: clk, rst: bool, sclk_falling_edge: bool, t: Timing) -> S
                 State::CsLow$(line, duration: trunc(duration+1))
             }
         },
-        State::CsHigh$(line, duration) => {
+        (_, State::CsHigh$(line, duration)) => {
             if duration == trunc(t.us1-1) {
                 if sclk_falling_edge {State::Mode(line)} else {state}
             }
@@ -109,58 +109,18 @@ entity display_fsm(clk: clk, rst: bool, sclk_falling_edge: bool, t: Timing) -> S
                 State::CsHigh$(line, duration: trunc(duration+1))
             }
         },
-        State::Mode(line) =>
-            if sclk_falling_edge {State::FrameInv(line)} else {state},
-        State::FrameInv(line) =>
-            if sclk_falling_edge {State::Clear(line)} else {state},
-        State::Clear(line) =>
-            if sclk_falling_edge {State::FirstDummy$(line, count: 0)} else {state},
-        State::FirstDummy$(line, count) => {
-            if sclk_falling_edge {
-                if count == 4
-                    { State::Address$(line, count: 0) }
-                else
-                    { State::FirstDummy$(line, count: trunc(count+1)) }
-            }
-            else {
-                state
-            }
-        },
-        State::Address$(line, count) => {
-            if sclk_falling_edge {
-                if count == 7
-                    {State::Data$(line, x: 0)}
-                else
-                    {State::Address$(line, count: trunc(count + 1))}
-            }
-            else {
-                state
-            }
-        },
-        State::Data$(line, x) => {
-            if sclk_falling_edge {
-                // TODO: Make configurable?
-                if x == 399
-                    { State::EndDummy$(line, count: 0) }
-                else
-                    { State::Data$(line, x: trunc(x+1)) }
-            }
-            else {
-                state
-            }
-        },
-        State::EndDummy$(line, count) => {
-            if sclk_falling_edge {
-                if count == 15
-                    { State::EndCsh$(line, duration: 0) }
-                else
-                    { State::EndDummy$(line, count: trunc(count+1)) }
-            }
-            else {
-                state
-            }
-        },
-        State::EndCsh$(line, duration) => {
+        (true, State::Mode(line)) => State::FrameInv(line),
+        (true, State::FrameInv(line)) => State::Clear(line),
+        (true, State::Clear(line)) => State::FirstDummy$(line, count: 0),
+        (true, State::FirstDummy$(line, count: 4)) => State::Address$(line, count: 0),
+        (true, State::FirstDummy$(line, count)) => State::FirstDummy$(line, count: trunc(count+1)),
+        (true, State::Address$(line, count: 7)) => State::Data$(line, x: 0),
+        (true, State::Address$(line, count)) => State::Address$(line, count: trunc(count + 1)),
+        (true, State::Data$(line, x: 399)) => State::EndDummy$(line, count: 0),
+        (true, State::Data$(line, x)) => State::Data$(line, x: trunc(x+1)),
+        (true, State::EndDummy$(line, count: 15)) => State::EndCsh$(line, duration: 0),
+        (true, State::EndDummy$(line, count)) => State::EndDummy$(line, count: trunc(count+1)),
+        (_, State::EndCsh$(line, duration)) => {
             if duration >= trunc(t.us1 - 1) {
                 let new_line = if line == 239 { 0 } else { trunc(line+1) };
                 State::CsLow$(line: new_line, duration: 0)
@@ -168,7 +128,8 @@ entity display_fsm(clk: clk, rst: bool, sclk_falling_edge: bool, t: Timing) -> S
             else {
                 State::EndCsh$(line, duration: trunc(duration+1))
             }
-        }
+        },
+        (false, _) => state,
     };
 
     state
