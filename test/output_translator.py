@@ -3,6 +3,7 @@
 from spade import *
 
 from cocotb.clock import Clock
+from cocotb import triggers
 
 async def ensure_sclk_passthrough(s, o):
     s.i.sclk = "true"

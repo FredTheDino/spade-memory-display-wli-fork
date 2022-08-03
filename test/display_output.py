@@ -2,6 +2,7 @@
 
 from spade import *
 
+from cocotb import triggers
 
 @cocotb.test()
 async def every_second_line_has_high_frame_inv(dut):
