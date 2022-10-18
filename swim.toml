@@ -1,6 +1,3 @@
-compiler_dir = "spade"
-source_dirs = ["src"]
-
 [simulation]
 testbench_dir = "test"
 
