@@ -20,7 +20,7 @@ struct DisplayGenOutput {
 
 /// Generates the base otuput signals which should then be converted
 /// to contain the graphics and passed to the output translator
-entity display_gen(clk: clk, rst: bool, t: Timing) -> DisplayGenOutput {
+entity display_gen(clk: clock, rst: bool, t: Timing) -> DisplayGenOutput {
     let Clk$(sclk, sclk_falling_edge) = inst clk_gen(clk, rst, t);
 
     let state = inst display_fsm$(clk, rst, sclk_falling_edge, t);
@@ -75,7 +75,7 @@ struct Clk {
     sclk_falling_edge: bool
 }
 
-entity clk_gen(clk: clk, rst: bool, t: Timing) -> Clk {
+entity clk_gen(clk: clock, rst: bool, t: Timing) -> Clk {
     reg(clk) ctr reset(rst: 0) = {
         if ctr == t.mhz1 {
             0
@@ -91,7 +91,7 @@ entity clk_gen(clk: clk, rst: bool, t: Timing) -> Clk {
     )
 }
 
-entity display_fsm(clk: clk, rst: bool, sclk_falling_edge: bool, t: Timing) -> State {
+entity display_fsm(clk: clock, rst: bool, sclk_falling_edge: bool, t: Timing) -> State {
     reg(clk) state reset(rst: State::CsLow(0, 0)) = match (sclk_falling_edge, state) {
         (_, State::CsLow$(line, duration)) => {
             if duration == trunc(t.us1-1) {

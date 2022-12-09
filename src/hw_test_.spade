@@ -4,7 +4,7 @@ use lib::main::Timing;
 use lib::main::display_gen;
 use lib::main::output_translator;
 
-entity top(clk: clk, rst: bool) -> OutputPins {
+entity top(clk: clock, rst: bool) -> OutputPins {
     let t = Timing$(
         us1: 12,
         us3: 36,
