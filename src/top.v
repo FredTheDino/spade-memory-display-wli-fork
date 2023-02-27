@@ -10,7 +10,7 @@ module top
         rst <= 0;
     end
 
-    e_proj_hw_test__top main
+    \proj::hw_test_::top main
         ( .clk_i(clk)
         , .rst_i(rst)
         , .output__({sclk, cs, mosi})
