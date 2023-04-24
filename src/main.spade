@@ -94,7 +94,7 @@ entity clk_gen(clk: clock, rst: bool, t: Timing) -> Clk {
 entity display_fsm(clk: clock, rst: bool, sclk_falling_edge: bool, t: Timing) -> State {
     reg(clk) state reset(rst: State::CsLow(0, 0)) = match (sclk_falling_edge, state) {
         (_, State::CsLow$(line, duration)) => {
-            if duration == trunc(t.us1-1) {
+            if duration == trunc(t.us1 - 1) {
                 State::CsHigh$(line, duration: 0)
             }
             else {
@@ -102,7 +102,7 @@ entity display_fsm(clk: clock, rst: bool, sclk_falling_edge: bool, t: Timing) ->
             }
         },
         (_, State::CsHigh$(line, duration)) => {
-            if duration == trunc(t.us1-1) {
+            if duration == trunc(t.us1 - 1) {
                 if sclk_falling_edge {State::Mode(line)} else {state}
             }
             else {
