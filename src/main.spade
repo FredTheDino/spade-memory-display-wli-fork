@@ -76,12 +76,15 @@ struct Clk {
 }
 
 entity clk_gen(clk: clock, rst: bool, t: Timing) -> Clk {
+    let one: int<2> = 1;
     reg(clk) ctr reset(rst: 0) = {
         if ctr == t.mhz1 {
             0
         }
         else {
-            trunc(ctr+1)
+            let ctr_: int<10> = ctr + one; 
+            let ctr_: int<10> = trunc(ctr_);
+            ctr_
         }
     };
 
@@ -92,41 +95,71 @@ entity clk_gen(clk: clock, rst: bool, t: Timing) -> Clk {
 }
 
 entity display_fsm(clk: clock, rst: bool, sclk_falling_edge: bool, t: Timing) -> State {
+    let one: int<2> = 1;
     reg(clk) state reset(rst: State::CsLow(0, 0)) = match (sclk_falling_edge, state) {
         (_, State::CsLow$(line, duration)) => {
-            if duration == trunc(t.us1 - 1) {
+            let us1_: int<11> = t.us1 - one;
+            let us1_: int<10> = trunc(us1_);
+            if duration == us1_ {
                 State::CsHigh$(line, duration: 0)
             }
             else {
-                State::CsLow$(line, duration: trunc(duration+1))
+                let duration_: int<11> = duration+one;
+                let duration_: int<10> = trunc(duration_);
+                State::CsLow$(line, duration: duration_)
             }
         },
         (_, State::CsHigh$(line, duration)) => {
-            if duration == trunc(t.us1 - 1) {
+            let us1_: int<11> = t.us1 - one;
+            let us1_: int<10> = trunc(us1_);
+            if duration == us1_ {
                 if sclk_falling_edge {State::Mode(line)} else {state}
             }
             else {
-                State::CsHigh$(line, duration: trunc(duration+1))
+                let duration_: int<11> = duration+one;
+                let duration_: int<10> = trunc(duration_);
+                State::CsLow$(line, duration: duration_)
             }
         },
         (true, State::Mode(line)) => State::FrameInv(line),
         (true, State::FrameInv(line)) => State::Clear(line),
         (true, State::Clear(line)) => State::FirstDummy$(line, count: 0),
         (true, State::FirstDummy$(line, count: 4)) => State::Address$(line, count: 0),
-        (true, State::FirstDummy$(line, count)) => State::FirstDummy$(line, count: trunc(count+1)),
+        (true, State::FirstDummy$(line, count)) => {
+          let count_: int<6> = count + one;
+          let count_: int<5> = trunc(count_);
+          State::FirstDummy$(line, count: count_)
+        },
         (true, State::Address$(line, count: 7)) => State::Data$(line, x: 0),
-        (true, State::Address$(line, count)) => State::Address$(line, count: trunc(count + 1)),
+        (true, State::Address$(line, count)) => {
+          let count_: int<6> = count + one;
+          let count_: int<5> = trunc(count_);
+          State::FirstDummy$(line, count: count_)
+        },
         (true, State::Data$(line, x: 399)) => State::EndDummy$(line, count: 0),
-        (true, State::Data$(line, x)) => State::Data$(line, x: trunc(x+1)),
+        (true, State::Data$(line, x)) => {
+          let x_: int<11> = x + one;
+          let x_: int<10> = trunc(x_);
+          State::Data$(line, x: x_)
+        },
         (true, State::EndDummy$(line, count: 15)) => State::EndCsh$(line, duration: 0),
-        (true, State::EndDummy$(line, count)) => State::EndDummy$(line, count: trunc(count+1)),
+        (true, State::EndDummy$(line, count)) => {
+          let count_: int<6> = count+one;
+          State::EndDummy$(line, count: trunc(count_))
+        },
         (_, State::EndCsh$(line, duration)) => {
-            if duration >= trunc(t.us1 - 1) {
-                let new_line = if line == 239 { 0 } else { trunc(line+1) };
+            let us1_: int<11> = t.us1 - one;
+            let us1_: int<10> = trunc(us1_);
+            if duration >= us1_ {
+                let line_: int<10> = line + one;
+                let line_: int<9> = trunc(line_);
+                let new_line = if line == 239 { 0 } else { line_ };
                 State::CsLow$(line: new_line, duration: 0)
             }
             else {
-                State::EndCsh$(line, duration: trunc(duration+1))
+                let duration_: int<11> = duration+one;
+                let duration_: int<10> = trunc(duration_);
+                State::EndCsh$(line, duration: duration_)
             }
         },
         (false, _) => state,
