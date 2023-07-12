@@ -76,32 +76,30 @@ struct Clk {
 }
 
 entity clk_gen(clk: clock, rst: bool, t: Timing) -> Clk {
-    let one: int<2> = 1;
-    reg(clk) ctr reset(rst: 0) = {
+    let one: int<1..1> = 1;
+    reg(clk) ctr reset(rst: sext(0)) = {
         if ctr == t.mhz1 {
-            0
+            sext(0)
         }
         else {
-            let ctr_: int<10> = ctr + one; 
-            let ctr_: int<10> = trunc(ctr_);
-            ctr_
+            trunc(ctr + one)
         }
     };
 
     Clk$(
-        sclk: ctr > (t.mhz1 `div_pow2` 1),
-        sclk_falling_edge: ctr == 0
+        sclk: ctr > (t.mhz1 `div_pow2` sext(1)),
+        sclk_falling_edge: ctr == sext(0)
     )
 }
 
 entity display_fsm(clk: clock, rst: bool, sclk_falling_edge: bool, t: Timing) -> State {
-    let one: int<2> = 1;
-    reg(clk) state reset(rst: State::CsLow(0, 0)) = match (sclk_falling_edge, state) {
+    let one: int<1..1> = 1;
+    reg(clk) state reset(rst: State::CsLow(sext(0), sext(0))) = match (sclk_falling_edge, state) {
         (_, State::CsLow$(line, duration)) => {
             let us1_: int<11> = t.us1 - one;
             let us1_: int<10> = trunc(us1_);
             if duration == us1_ {
-                State::CsHigh$(line, duration: 0)
+                State::CsHigh$(line, duration: sext(0))
             }
             else {
                 let duration_: int<11> = duration+one;
@@ -123,26 +121,26 @@ entity display_fsm(clk: clock, rst: bool, sclk_falling_edge: bool, t: Timing) ->
         },
         (true, State::Mode(line)) => State::FrameInv(line),
         (true, State::FrameInv(line)) => State::Clear(line),
-        (true, State::Clear(line)) => State::FirstDummy$(line, count: 0),
-        (true, State::FirstDummy$(line, count: 4)) => State::Address$(line, count: 0),
+        (true, State::Clear(line)) => State::FirstDummy$(line, count: sext(0)),
+        (true, State::FirstDummy$(line, count: 4)) => State::Address$(line, count: sext(0)),
         (true, State::FirstDummy$(line, count)) => {
           let count_: int<6> = count + one;
           let count_: int<5> = trunc(count_);
           State::FirstDummy$(line, count: count_)
         },
-        (true, State::Address$(line, count: 7)) => State::Data$(line, x: 0),
+        (true, State::Address$(line, count: 7)) => State::Data$(line, x: sext(0)),
         (true, State::Address$(line, count)) => {
           let count_: int<6> = count + one;
           let count_: int<5> = trunc(count_);
           State::FirstDummy$(line, count: count_)
         },
-        (true, State::Data$(line, x: 399)) => State::EndDummy$(line, count: 0),
+        (true, State::Data$(line, x: 399)) => State::EndDummy$(line, count: sext(0)),
         (true, State::Data$(line, x)) => {
           let x_: int<11> = x + one;
           let x_: int<10> = trunc(x_);
           State::Data$(line, x: x_)
         },
-        (true, State::EndDummy$(line, count: 15)) => State::EndCsh$(line, duration: 0),
+        (true, State::EndDummy$(line, count: 15)) => State::EndCsh$(line, duration: sext(0)),
         (true, State::EndDummy$(line, count)) => {
           let count_: int<6> = count+one;
           State::EndDummy$(line, count: trunc(count_))
@@ -153,8 +151,8 @@ entity display_fsm(clk: clock, rst: bool, sclk_falling_edge: bool, t: Timing) ->
             if duration >= us1_ {
                 let line_: int<10> = line + one;
                 let line_: int<9> = trunc(line_);
-                let new_line = if line == 239 { 0 } else { line_ };
-                State::CsLow$(line: new_line, duration: 0)
+                let new_line = if line == sext(239) { sext(0) } else { line_ };
+                State::CsLow$(line: new_line, duration: sext(0))
             }
             else {
                 let duration_: int<11> = duration+one;
@@ -175,9 +173,9 @@ fn display_output(state: State) -> Output<(int<10>, int<9>)> {
         State::CsHigh(_, _) => Output::CsHigh(),
         State::Mode(_) => Output::UpdateMode(),
         State::FirstDummy(_, _) => Output::Dummy(),
-        State::FrameInv(line) => Output::FrameInv((line & 1) == 1),
+        State::FrameInv(line) => Output::FrameInv((line & (sext(1))) == sext(1)),
         State::Clear(_) => Output::AllClear(),
-        State::Address(line, count) => Output::Address(((line >> zext(count)) & 1) == 1),
+        State::Address(line, count) => Output::Address(((line >> zext(count)) & sext(1)) == sext(1)),
         State::Data$(line, x) => Output::Pixel((x, line)),
         State::EndDummy(_, _) => Output::Dummy(),
         State::EndCsh(_, _) => Output::CsHigh(),

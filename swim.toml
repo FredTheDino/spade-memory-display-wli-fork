@@ -1,3 +1,5 @@
+compiler = { path = "/home/ed/Code/thesis-spade-lang/spade/" }
+
 [simulation]
 testbench_dir = "test"
 

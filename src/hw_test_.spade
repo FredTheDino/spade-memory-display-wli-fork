@@ -5,30 +5,29 @@ use lib::main::display_gen;
 use lib::main::output_translator;
 
 entity top(clk: clock, rst: bool) -> OutputPins {
-    let one: int<2> = 1;
+    let one: int<1..1> = 1;
     let t = Timing$(
-        us1: 12,
-        us3: 36,
-        mhz1: 6
+        us1: sext(12),
+        us3: sext(36),
+        mhz1: sext(6)
     );
 
     let display_signals = inst display_gen(clk, rst, t);
 
-    reg(clk) slow_timer: int<32> reset(rst: 0) = if slow_timer == 1_200_000 {
-        0
+    reg(clk) slow_timer: int<0..1_200_000> reset(rst: sext(0)) = if slow_timer == sext(1_200_000) {
+        sext(0)
     }
     else {
-        let slow_timer_: int<33> = slow_timer + one;
-        let slow_timer_: int<32> = trunc(slow_timer_);
+        let slow_timer_ = slow_timer + one;
+        let slow_timer_ = trunc(slow_timer_);
         slow_timer_
     };
 
-    reg(clk) offset: int<10> reset(rst: 0) = if slow_timer == 0 {
-        let offset_: int<11> = offset + one;
-        let offset_: int<10> = trunc(offset);
-        offset_
+    reg(clk) offset: int<10> reset(rst: sext(0)) = if slow_timer == sext(0) {
+        let offset_ = offset + one;
+        trunc(offset)
     } else {
-        offset
+        trunc(offset)
     };
 
     let with_pixels = match display_signals.o {
