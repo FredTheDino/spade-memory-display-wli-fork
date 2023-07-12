@@ -1,3 +1,6 @@
+# THIS IS A FORK
+This version is not actively maintained. Unless you came from a thesis the changes presented here are not of interest to you, and you probably meant to go to https://gitlab.com/TheZoq2/spade-memory-display/-/tree/main
+
 # Memory Display
 
 Spade driver for the adafruit sharp memory display
